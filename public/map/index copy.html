@@ -1,0 +1,460 @@
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: 曾利锋[阿牛]
+ * @Date: 2022-06-08 17:43:06
+ * @LastEditors: 曾利锋[阿牛]
+ * @LastEditTime: 2022-06-10 15:57:51
+-->
+<!--
+ * @Descripttion: 
+ * @version: 
+ * @Author: 曾利锋[阿牛]
+ * @Date: 2022-06-07 16:15:25
+ * @LastEditors: 曾利锋[阿牛]
+ * @LastEditTime: 2022-06-08 17:22:15
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script type="text/javascript">
+    window._AMapSecurityConfig = {
+      serviceHost: 'http://10.10.71.111:9005/_AMapService',
+      securityJsCode: "d6c0697f5c1aa208450b2a2886c884f2"
+      // 例如 ：serviceHost:'http://1.1.1.1:80/_AMapService',
+    }
+  </script>
+  <script type="text/javascript"
+    src="https://webapi.amap.com/maps?v=2.0&key=177f3eba147eaea82ba0a3a382113aab&plugin=AMap.LineSearch,AMap.GraspRoad"></script>
+  <script type="text/javascript" src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js"></script>
+
+
+</head>
+
+<body>
+  <div id="map" style="width:100vw;height:100vh"></div>  
+  <script type="text/javascript">
+   let circleList = [] 
+   let txtList = []
+   let GraspRoadList = [];
+   let graspRoad;
+   let tempList = [];
+   let key = "84089e5b76b44cffaa5e719c60efc745"
+    // 创建地图
+    var map = new AMap.Map('map', {
+      center: [120.897308, 28.02868],
+      zoom: 15,
+      // zoomEnable:false,
+    });
+    var linesearch;
+    /*公交线路查询*/
+    function lineSearch() {
+        var busLineName = "乐清222路";
+        if(!busLineName) return;
+        //实例化公交线路查询类，只取回一条路线
+        
+        linesearch = new AMap.LineSearch({
+            pageIndex: 1,
+            city: '乐清市',
+            pageSize: 1,
+            extensions: 'all'
+        });
+        
+        //搜索“536”相关公交线路
+        linesearch.search(busLineName, function(status, result) {
+           console.log(JSON.stringify(result))
+            map.clearMap()
+            if (status === 'complete' && result.info === 'OK') {
+                lineSearch_Callback(result);
+            } else {
+                alert(result);
+            }
+        });
+    }
+    /*公交路线查询服务返回数据解析概况*/
+    function lineSearch_Callback(data) {
+        var lineArr = data.lineInfo;
+        var lineNum = data.lineInfo.length;
+        if (lineNum == 0) {
+        } else {
+            for (var i = 0; i < lineNum; i++) {
+                var pathArr = lineArr[i].path;
+                var stops = lineArr[i].via_stops;
+                var startPot = stops[0].location;
+                var endPot = stops[stops.length - 1].location;
+                // console.log('via_stops',lineArr[i].via_stops)
+                if (i == 0) //作为示例，只绘制一条线路
+                // drawbusLine(startPot, endPot, pathArr);
+                drawbusCircle(lineArr[i].via_stops)
+                subsection(pathArr,stops)
+            }
+        }
+    }
+    //分段实现 
+    function subsection (pathArr,stopsite) { 
+      tempList = []
+      // tempList.push(subsection_sub(pathArr,stopsite[0],stopsite[1]))
+      // console.log(tempList)
+      stopsite.forEach((item,index)=>{ 
+        if(index == 16){ 
+
+        }else{
+          tempList.push(subsection_sub(pathArr,item,stopsite[index+1])) 
+        }
+      })
+      // //知道道路路况
+      // tempList.forEach((item,index)=>{
+      //   GraspRoad(item)
+      // })
+
+      // 绘画路径 
+      GraspRoad(tempList).then(res=>{
+        console.log(res)
+        let temp = res.map(item=>item.route.paths[0].steps).reduce((cur,per,index,arr)=>{
+        //  if(index == 15){
+        //   console.log("per",per)
+        //   // let test01 =  per.map(itemsub=>{
+        //   //   let tempItem01 = itemsub.polyline.split(';').map(item=>{
+        //   //     let tempItem = item.split(",").map(item=>parseFloat(item))
+        //   //     return tempItem
+        //   //   })
+        //   //   return  tempItem01
+        //   // })
+        //   // console.log("test01",JSON.stringify(test01))
+        //  }
+       
+          let resItem = per.map((item,index)=>{
+            let polyline = item.polyline;
+            let curItem = item.polyline.split(';').unshift();
+            if(per.length-1 != index){
+              let nextItem = (per[index+1].polyline)?.split(';')[0];
+              if(curItem != nextItem){
+                polyline += ";"+ nextItem 
+              }
+            }  
+            // console.log("polyline",polyline)
+            return {
+              ...item,
+              polyline:polyline
+            }
+          })
+          return cur.concat(resItem)
+        },[]).map(item=>{ 
+          return {
+            ...item,
+            polyline:item.polyline.split(';').map(item=>{
+              let tempItem = item.split(",").map(item=>parseFloat(item))
+              return tempItem
+            }),
+            color: distanceColor(item.distance / item.duration)
+          }
+        })
+
+          
+          // item.route.paths[0]?item.route.paths[0]:{};
+          //   return {
+          //   ...newItem,
+          //   color: distanceColor(newItem.distance / newItem.duration)
+          // }
+          // drawbusLine(temp[0].polyline,temp[0].color)
+        for(let i=0;i<temp.length;i++){ 
+          drawbusLine(temp[i].polyline,temp[i].color)
+        } 
+      })
+
+      return tempList
+    }
+    // 道路路况
+    function GraspRoad (pathArr) {  
+      let reset = [];
+      let tempArr = pathArr  
+      for(let i = 0;i<pathArr.length;i++){   
+        let origins = pathArr[i][0].lng + "," + pathArr[i][0].lat; 
+        let destination = pathArr[i][pathArr[i].length-1].lng + "," + ((pathArr[i][pathArr[i].length-1]).lat); 
+        let waypoints = diffSite(pathArr[i].slice(1,pathArr[i].length-1))
+        reset.push(fetch(`https://restapi.amap.com/v3/direction/driving?key=${key}&origin=${origins}&destination=${destination}&waypoints=${waypoints}&extensions=base`,{
+          method:"get"
+        }).then(res=>res.json()))
+       }  
+      return  Promise.all(reset)
+ 
+
+
+    //  const data =  reset.reduce((cur,per,index)=>{ 
+    //     Promise.all(per).then(res=>{
+    //       let temp = res.map(item=>{  
+    //         let newItem = item.route.paths[0]?item.route.paths[0]:{};
+    //          return {
+    //           ...newItem,
+    //           color: distanceColor(newItem.distance / newItem.duration)
+    //         }
+    //       })  
+    //      return []
+    //     })
+    //   },[])
+    // const dataddd=  limitFetch([],reset,0) 
+    // console.log("1111",dataddd)
+     
+
+      // return limitFetch(reset)
+      // console.log("111111111",glist)
+      // return new Promise((resolve,reject)=>{
+      //   let i = 0;
+      //   let resdata = [];
+      //   reset.forEach((item,index)=>{
+      //     setTimeout(()=>{
+      //       Promise.all(item).then(res => { 
+      //         console.log("---res--",index,res)
+      //         let temp = res.map(item=>{  
+      //           let newItem = item.route.paths[0]?item.route.paths[0]:{};
+      //           // console.log(newItem.distance / newItem.duration)
+      //           return {
+      //             ...newItem,
+      //             color: distanceColor(newItem.distance / newItem.duration)
+      //           }
+      //         }) 
+      //         resdata = resdata.concat(temp)
+      //         if(index === reset.length - 1){
+      //           resolve(resdata)
+      //         } 
+      //       })
+      //     },3000) 
+      //   })   
+      // })  
+    }
+    //公交点位算法
+    function diffSite (data) {
+      let reset = [];
+      //当前途中经过的站点少于等于16站点
+      if(data && data.length <= 16){
+        reset = data.map((item,index)=>{
+          let itemValue = item.lng + "," + item.lat;  
+          return itemValue
+        })
+      }else{
+        if(parseInt(data.length / 2) <=16){
+          reset = data.filter((item,index)=>index%2==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }else if(parseInt(data.length / 3) <=16){
+          reset = data.filter((item,index)=>index%3==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }else if(parseInt(data.length / 4) <=16){
+          reset = data.filter((item,index)=>index%4==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }else if(parseInt(data.length / 5) <=16){
+          reset = data.filter((item,index)=>index%5==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }else if(parseInt(data.length / 6) <=16){
+          reset = data.filter((item,index)=>index%6==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }else if(parseInt(data.length / 10) <=16){
+          reset = data.filter((item,index)=>index%10==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }else if(parseInt(data.length / 20) <=16){
+          reset = data.filter((item,index)=>index%20==0).map((item,index)=>{
+            let itemValue = item.lng + "," + item.lat;  
+            return itemValue
+          }) 
+        }  
+      } 
+      return reset.join(";")
+    }
+
+
+
+
+    function limitFetch (Aarry=[],resetData,cur=0) {  
+      return new Promise((resolve,reject)=>{
+        let curNum = cur 
+        let reset = [];
+        subLimitFetch(resetData[cur]).then(res=>{
+          let temp = res.map(item=>{  
+            let newItem = item.route.paths[0]?item.route.paths[0]:{};
+              return {
+              ...newItem,
+              color: distanceColor(newItem.distance / newItem.duration)
+            }
+          })  
+          reset = reset.concat(temp)
+          if(cur === resetData.length-1){
+            resolve(reset)
+          }else{
+
+          } 
+        })
+      }) 
+      
+    } 
+
+
+    function subLimitFetch (resetDat=[]) {  
+      let sublist = resetData.map(item=>{
+        return fetch(item,{method:"get"}).then(res=>res.json())
+      })
+     return Promise.all(sublist)
+    }
+    // function GraspRoad (pathArr) { 
+    //     let list = [];
+    //     for (let i = 1; i < pathArr.length; i++) { 
+    //       let origins = (pathArr[i - 1]).lng + "," + (pathArr[i - 1]).lat;
+    //       let destination = (pathArr[i]).lng + "," + (pathArr[i]).lat; 
+    //       list.push(
+    //         fetch(`https://restapi.amap.com/v3/direction/driving?key=${key}&origin=${origins}&destination=${destination}&extensions=base`, {
+    //           method: "get",
+    //         }).then(res => res.json())
+    //       )
+    //     }
+    //     return Promise.all(list).then(res => {
+    //       let temp = res.map(item=>{ 
+    //         console.log("results",item)
+    //         let newItem = item.results?item.results[0]:{};
+    //         return {
+    //           ...newItem,
+    //           color: distanceColor(newItem.distance / newItem.duration)
+    //         }
+    //       })
+    //       return temp
+    //     })  
+    // }
+   function  distanceColor(time) {
+      let flag = 'green';
+      let list = ['#ff0000','#ff9900','green'];
+      if (time < 3) {
+        flag = list[0]
+      } else if (time < 4) {
+        flag = list[1]
+      } else {
+        flag = list[2]
+      }
+      return flag
+    } 
+
+    function subsection_sub (pathArr,item1,item2) {
+      let reset = [];
+      let status = 'pendding';
+      for(let i=0;i<pathArr.length;i++){
+        if(status == 'pendding'){   
+          if(pathArr[i].lng == item1.location.lng && pathArr[i].lat == item1.location.lat){
+            reset.push(pathArr[i])
+            status = 'next'
+          }
+        }else if (status == 'next') {
+          if(pathArr[i].lng == item2.location.lng && pathArr[i].lat == item2.location.lat){
+            status = 'fulled'
+            reset.push(pathArr[i])
+            break;
+          }else{
+            reset.push(pathArr[i])
+          }
+        } 
+      }
+      return reset 
+    }
+
+    function drawbusCircle(pathArr){ 
+      circleRomove()
+      txtRomove()
+      pathArr.forEach((item,index)=>{
+        circle({longitude:item.location.lng,latitude:item.location.lat,name:item.name,index:index})
+      })
+    }
+     //创建圆点
+     function circle (item) { 
+      let circle = new AMap.Circle({
+          center: new AMap.LngLat(item.longitude,item.latitude),  // 圆心位置
+          // center: new AMap.LngLat(120.88982343157352,28.05275635969054),
+          radius: 1, // 圆半径
+          fillColor: '#fff',   // 圆形填充颜色
+          strokeColor: 'green', // 描边颜色
+          strokeWeight: 1, // 描边宽度
+          fillOpacity:1,
+          zIndex:100
+      }); 
+      var text = new AMap.Text({
+          text:item.name + "" +item.index,
+          anchor:'center', // 设置文本标记锚点
+          draggable:true,
+          cursor:'pointer', 
+          style:{
+            fontSize:"12px"
+           },
+          position: [item.longitude,item.latitude]
+      });
+      circle.on('click',(e)=>{
+        console.log("click",e)
+      })
+      
+      circle.setMap(map);
+      txtList.push(text);
+      circleList.push(circle) ;
+      text.setMap(map); 
+    } 
+    //删除圆点
+    function circleRomove () {
+      circleList.forEach(item=>{
+        map.remove(item)
+      })
+    }
+    //删除圆点
+    function txtRomove () {
+      txtList.forEach(item=>{
+        map.remove(item)
+      })
+    }
+    /*绘制路线*/
+    function drawbusLine(BusArr,color="#318653") { 
+      // console.log("BusArr",JSON.stringify(BusArr))
+      //  console.log("color",color)
+        //绘制乘车的路线
+        busPolyline = new AMap.Polyline({
+            map: map,
+            path: BusArr, 
+            strokeColor: color,//线颜色
+            strokeOpacity: 0.8,//线透明度
+            isOutline:true,
+            outlineColor:'white',
+            showDir: true,
+            strokeWeight: 8,//线宽
+            zIndex: 10000
+            // path: BusArr,
+            // isOutline: true,
+            // outlineColor: '#ffeeff',
+            // borderWeight: 3,
+            // strokeColor: color,
+            // strokeOpacity: 1,
+            // strokeWeight: 6,
+            // // 折线样式还支持 'dashed'
+            // // strokeStyle: "dashed",
+            // // strokeStyle是dashed时有效
+            // strokeDasharray: [15, 5],
+            // // lineJoin: 'round',
+            // // lineCap: 'round',
+            // zIndex: 50,
+        }); 
+        map.add([busPolyline]);
+        map.setFitView();
+    }
+    
+    lineSearch();
+ 
+  </script>
+</body>
+
+</html>
