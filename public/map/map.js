@@ -290,33 +290,43 @@ class BDMAP{
   setSitePath (data) { 
     this.$clearCmapTime && clearInterval(this.$clearCmapTime) // 取消定时器 
     data.forEach((item,index)=>{
-      this.$cheSitePath[index] && this.$cmap.remove(this.$cheSitePath[index]) 
+      this.$cheSitePath[index] && this.$cmap.removeOverlay(this.$cheSitePath[index]) 
       let color = this.distanceColor(item.distance / item.duration,item.distance) 
       let busPolyline = this.drawbusLineItem(this.$sitePath[index],color)
-      this.$cmap.add([busPolyline]);
+      this.$cmap.addOverlay(busPolyline);
       this.$cheSitePath[index] = busPolyline
     })
   }
   lineSearch (siteName) {
     this.$clearCmapTime && clearInterval(this.$clearCmapTime) // 取消定时器
-    this.$cmap.clearMap()  // 创建之前，现在清除之前覆盖物
+    this.$cmap.clearOverlays()  // 创建之前，现在清除之前覆盖物
     let _this = this; 
     if(!siteName) return;
-    this.$lineSearchData = new AMap.LineSearch(Object.assign(
-      {
-        pageIndex: 1,
-        city: '乐清市',
-        pageSize: 1,
-        extensions: 'all'
-      },this.$LineSearch
-    )) 
-    this.$lineSearchData.search(siteName, function(status, result) {
-       if (status === 'complete' && result.info === 'OK') {
-        _this.lineSearch_Callback(result); 
-       } else {
-        alert(result);
-       }
-   });
+    this.$lineSearchData = new BMapGL.BusLineSearch(this.$cmap,{
+      renderOptions:{map: this.$cmap,},
+      onGetBusListComplete: function(result){
+          if(result) {
+            console.log("1111111",result)
+          }
+      }
+  });
+  this.$lineSearchData.getBusList(siteName);
+
+    // this.$lineSearchData = new AMap.LineSearch(Object.assign(
+    //   {
+    //     pageIndex: 1,
+    //     city: '乐清市',
+    //     pageSize: 1,
+    //     extensions: 'all'
+    //   },this.$LineSearch
+    // )) 
+  //   this.$lineSearchData.search(siteName, function(status, result) {
+  //      if (status === 'complete' && result.info === 'OK') {
+  //       _this.lineSearch_Callback(result); 
+  //      } else {
+  //       alert(result);
+  //      }
+  //  });
   } 
   lineSearch_Callback (data) { 
     // console.log(data)

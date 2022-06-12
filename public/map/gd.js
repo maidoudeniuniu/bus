@@ -92,7 +92,7 @@ class GDMAP{
       let destination =item[1][0] + "," + item[1][1];
       // 这里为什么不加途中点，是因为这个驾车模式，和公交线路不一样的，95%一样，还是5%有可能要绕路，
       // 业务场景例如：比如有些线路公交车可以过，私家车不能过的
-      let str = `https://restapi.amap.com/v3/direction/driving?key=${key}&origin=${origins}&destination=${destination}&extensions=base`
+      let str = `http://api.map.baidu.com/routematrix/v2/driving?key=${key}&origin=${origins}&destination=${destination}&extensions=base`
       this.$fetchList.push(str) 
     })
   }
