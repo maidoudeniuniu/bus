@@ -1,3 +1,11 @@
+/*
+ * @Descripttion: 
+ * @version: 
+ * @Author: 曾利锋[阿牛]
+ * @Date: 2022-06-14 15:53:08
+ * @LastEditors: 曾利锋[阿牛]
+ * @LastEditTime: 2022-06-14 16:24:26
+ */
 class GDMAP{
   constructor (options) {
     this.$options = options;
@@ -10,7 +18,7 @@ class GDMAP{
     this.$initParam  = options.initParam || {} //初始化参数
     this.$LineSearch = options.LineSearch || {} 
     this.$siteName = options.siteName || "乐清211路"; //线路
-    this.$color = options.color || ['#1BBC60','#ff9900','#ff0000']
+    this.$color = options.color || ['#3FC16C','#ff9900','#ff0000']
     this.$lineSearchData; //线路数据
     this.$sitePath = options.sitePath ||  []; // 线路数据
     this.$site = options.site || []; //站点列表
@@ -287,7 +295,7 @@ class BDMAP{
     this.$initParam  = options.initParam || {} //初始化参数
     this.$LineSearch = options.LineSearch || {} 
     this.$siteName = options.siteName || "乐清211路"; //线路
-    this.$color = options.color || ['#3FC16C','#ff9900','#ff0000']
+    this.$color = options.color || ['#1BBC60','#ff9900','#ff0000']
     this.$lineSearchData; //线路数据
     this.$sitePath = options.sitePath ||  []; // 线路数据
     this.$site = options.site || []; //站点列表
@@ -550,11 +558,12 @@ class BDMAP{
   drawbusLineItem (arrPath,color=this.$color[0]) {
     let data = arrPath.map(item=>{
       return new BMapGL.Point(item[0], item[1])
-    })
+    }) 
     return new BMapGL.Polyline(data,{
+      // geodesic:true,
       strokeColor: color,
       strokeWeight: 8,
-      strokeOpacity: 1
+      strokeOpacity: 1, 
     });   
   }
 }
@@ -567,7 +576,7 @@ function Cmap (options) {
   }
 }
 Cmap({
-  type:"GD"
+  type:"BD"
 })
 // window.Cmap = Cmap
 
