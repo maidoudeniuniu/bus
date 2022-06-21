@@ -45,6 +45,19 @@ class QQMAP{
     });  
     this.$busicon = this.$data.busicon
 
+    // var search = new TMap.service.Search({ pageSize: 20,cityName:"乐清市",filter:"category=基础设施,交通设施,公交车站",regionFix:true });
+    // search.searchRectangle({
+    //   keyword: "乐清211路",
+    //   pageIndex:1,
+    //   getSubpois:true,
+    //   bounds: this.$cmap.getBounds(),
+    // })
+    // .then((result) => {
+    //   console.log(JSON.stringify(result))
+    //   console.log(result.data.filter(item=>item.type==1))
+    // })
+    // return
+
     if(this.$mode === "auto"){
       this.lineSearch(this.$siteName)
       this.polylineLayer();
@@ -187,13 +200,12 @@ class QQMAP{
       let destination =item[1][1] + "," + item[1][0];
       // 这里为什么不加途中点，是因为这个驾车模式，和公交线路不一样的，95%一样，还是5%有可能要绕路，
       // 业务场景例如：比如有些线路公交车可以过，私家车不能过的 
-      let str = `https://apis.map.qq.com/ws/direction/v1/driving/?key=${key}&from=${origins}&to=${destination}&output=jsonp`
+      let str = `https://apis.map.qq.com/ws/direction/v1/driving/?key=${key}&from=${origins}&to=${destination}&output=jsonp&policy=LEAST_TIME,REAL_TRAFFIC`
       this.$fetchList.push(str) 
     })
   }
   startLine () { 
-    if(this.$curPage == this.$totalLimit-1){
-
+    if(this.$curPage == this.$totalLimit-1){ 
       this.$clearCmapTime && clearTimeout(this.$clearCmapTime) // 取消定时器
       this.$curPage = 1
       this.$clearCmapTime = setTimeout(()=>{

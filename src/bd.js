@@ -285,4 +285,4 @@ class BDMAP{
   }
 }
 
-export default BDMAP
+module.exports = BDMAP;

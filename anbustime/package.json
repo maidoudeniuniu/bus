@@ -1,0 +1,24 @@
+{
+  "name": "anbustime",
+  "version": "0.0.5",
+  "description": "bustime 是一款结合高德地图，百度地图，腾讯地图的实时公交的线路，支持模式自动获取和主动提供线路方法",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "高德地图",
+    "百度地图",
+    "腾讯地图",
+    "baidumap",
+    "amap",
+    "qqmap",
+    "实时公交"
+  ],
+  "author": "aniu",
+  "license": "ISC", 
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}

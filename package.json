@@ -1,18 +1,36 @@
 {
-  "name": "temp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "anbustime",
+  "version": "0.0.1",
+  "description": "bustime 是一款结合高德地图，百度地图，腾讯地图的实时公交的线路，支持模式自动获取和主动提供线路方法",
+  "main": "dist/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "高德地图",
+    "百度地图",
+    "腾讯地图",
+    "baidumap",
+    "amap",
+    "qqmap",
+    "实时公交"
+  ],
+  "author": "aniu",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.0"
   },
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
+    "@babel/core": "^7.18.5",
+    "@babel/plugin-proposal-class-properties": "^7.17.12",
+    "@babel/preset-env": "^7.18.2",
+    "babel-loader": "^8.2.5",
+    "file-loader": "^6.2.0",
+    "url-loader": "^4.1.1",
     "webpack": "^5.73.0",
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.9.2"

@@ -1,15 +1,20 @@
+ 
+let busicon = require("./busicon.png");
+let siteicon = require("./site.png");
 class GDMAP{
   constructor (options) {
     this.$options = options;
     this.$callback = options.callback
     this.$callbackList = [] //回调对列表收集
-    this.$key= options.key || "84089e5b76b44cffaa5e719c60efc745"; //高德地图key
+    this.$key= options.key || ""; //高德地图key
+    this.$severKey= options.severKey || ""; //服务端key
+    this.$city = options.city
     this.$mode = options.mode || "auto"
     this.$type = options.type || "GD"; //模式 GD 高德  baidu 百度  tc 腾讯
     this.$el = options.el || "map";  //地图domid
     this.$initParam  = options.initParam || {} //初始化参数
     this.$LineSearch = options.LineSearch || {} 
-    this.$siteName = options.siteName || "乐清211路"; //线路
+    this.$siteName = options.siteName || ""; //线路
     this.$color = options.color || ['#1BBC60','#ff9900','#ff0000']
     this.$lineSearchData; //线路数据
     this.$sitePath = options.sitePath ||  []; // 线路数据
@@ -29,15 +34,57 @@ class GDMAP{
     if(options.sitePath){
       this.$totalLimit = options.sitePath.length
     } 
-    this.$times = 60000000 
-    this.$cmap = new AMap.Map(this.$el, Object.assign({       
-      zoom:15,
-    },this.$initParam));
-    if(this.$mode === "auto"){
-      this.lineSearch(this.$siteName)
-    }else{
-      this.init()
+    this.$times = options.time || 30000; //定时器
+    this.$busiconData = {
+      icon:options.busIcon.icon || busicon,
+      size:options.busIcon.size || [64, 72]
     }
+    this.$siteiconData = {
+      icon:options.siteIcon.icon || siteicon,
+      size:options.siteIcon.size || [64, 72]
+    } 
+  
+    //判断过滤
+    if(!this.$key){
+      throw new Error('地图key 没有填写');
+      return
+    }
+    if(!this.$city){
+      throw new Error('查询当前城市没有填写');
+      return
+    }
+    this.createElement().then(()=>{
+      console.log("------------createElement-------------")
+      this.$cmap = new AMap.Map(this.$el, Object.assign({       
+        zoom:15,
+      },this.$initParam));
+      if(this.$mode === "auto"){ 
+        if(!this.$siteName){
+          throw new Error('公交线路没有填写')
+          return
+        }
+        this.lineSearch(this.$siteName)
+      }else{
+        this.init()
+      } 
+    })
+  }
+  createElement () {
+    return new Promise((resolve,reject)=>{
+      if(window && !window.AMap){
+        var head = document.getElementsByTagName('head').item(0);
+        var script = document.createElement('script');
+        script.setAttribute('type', 'text/javascript'); 
+        script.setAttribute('src', 'https://webapi.amap.com/maps?v=2.0&key='+this.$key+'&plugin=AMap.LineSearch,AMap.GraspRoad');
+        head.appendChild(script); 
+        script.onload = script.onreadystatechange = function(){
+          if(!this.readyState||this.readyState=='loaded'||this.readyState=='complete'){  
+            resolve()
+          }
+          script.onload = script.onreadystatechange=null
+       }
+      }  
+    })
   }
   init () {
     this.drawbusLine(this.$sitePath);
@@ -46,11 +93,11 @@ class GDMAP{
   }
   //添加数据变化
   setSitePath (data) { 
-    this.$clearCmapTime && clearInterval(this.$clearCmapTime) // 取消定时器 
+    this.$clearCmapTime && clearInterval(this.$clearCmapTime); // 取消定时器 
     data.forEach((item,index)=>{
-      this.$cheSitePath[index] && this.$cmap.remove(this.$cheSitePath[index]) 
-      let color = this.distanceColor(item.distance / item.duration,item.distance) 
-      let busPolyline = this.drawbusLineItem(this.$sitePath[index],color)
+      this.$cheSitePath[index] && this.$cmap.remove(this.$cheSitePath[index]);
+      let color = this.distanceColor(item.distance / item.duration,item.distance);
+      let busPolyline = this.drawbusLineItem(this.$sitePath[index],color);
       this.$cmap.add([busPolyline]);
       this.$cheSitePath[index] = busPolyline
     })
@@ -64,6 +111,7 @@ class GDMAP{
     })
   }
   lineSearch (siteName) {
+    console.log("lineSearch",siteName)
     this.$clearCmapTime && clearInterval(this.$clearCmapTime) // 取消定时器
     this.$cmap.clearMap()  // 创建之前，现在清除之前覆盖物
     let _this = this; 
@@ -71,7 +119,7 @@ class GDMAP{
     this.$lineSearchData = new AMap.LineSearch(Object.assign(
       {
         pageIndex: 1,
-        city: '乐清市',
+        city: this.$city,
         pageSize: 1,
         extensions: 'all'
       },this.$LineSearch
@@ -85,7 +133,7 @@ class GDMAP{
    });
   } 
   lineSearch_Callback (data) { 
-    // console.log(data)
+    console.log("lineSearch_Callback",data)
     var lineArr = data.lineInfo;
     var lineNum = data.lineInfo.length;
     if (lineNum == 0) {
@@ -125,7 +173,7 @@ class GDMAP{
   // 缓存各个fetch记录
   getFetch () {
     this.$sitePath.forEach((item)=>{
-      let key = this.$key;
+      let key = this.$severKey;
       let origins = item[0][0] + "," +item[0][1]; 
       let destination =item[1][0] + "," + item[1][1];
       // 这里为什么不加途中点，是因为这个驾车模式，和公交线路不一样的，95%一样，还是5%有可能要绕路，
@@ -200,15 +248,13 @@ class GDMAP{
     var text;
     if(this.$siteTxtlock > -1 && this.$siteTxtlock == item.index){
       text = new AMap.Marker({
-              position:[item.lng,item.lat],   // 经纬度对象，也可以是经纬度构成的一维数组[116.39, 39.9]
-              // title: '北京',
-              size: new AMap.Size(64, 72),
-              // anchor: 'center', 
-              // imageSize: new AMap.Size(20, 20),
-              zIndex:100,
-              offset: new AMap.Pixel(-32, -64),
-              icon: './site.png', // 添加 Icon 图标 URL
-            });
+        position:[item.lng,item.lat],   // 经纬度对象，也可以是经纬度构成的一维数组[116.39, 39.9]
+        size: new AMap.Size(this.$siteiconData.size[0], this.$siteiconData.size[1]),
+        zIndex:100,
+        anchor: 'center', 
+        // offset: new AMap.Pixel(this.$siteiconData.size[0]/2, -this.$siteiconData.size[0]),
+        icon: this.$siteiconData.icon, // 添加 Icon 图标 URL
+      });
     }else{
       text = new AMap.Text({
         text:item.name,
@@ -263,14 +309,14 @@ class GDMAP{
   marker (item) {
     return new AMap.Marker({
           position: new AMap.LngLat(item.lng, item.lat),   // 经纬度对象，也可以是经纬度构成的一维数组[116.39, 39.9]
-          // title: '北京',
-          size: new AMap.Size(32, 36),
+          // title: item.name,
+          size: new AMap.Size(this.$busiconData.size[0], this.$busiconData.size[1]),
           anchor: 'center', 
-          imageSize: new AMap.Size(20, 20),
+          imageSize: new AMap.Size(-this.$busiconData.size[0], this.$busiconData.size[1]),
           zIndex:20,
-          // offset: new AMap.Pixel(0, -10),
-          icon: './busicon.png', // 添加 Icon 图标 URL
+          // offset: new AMap.Pixel(0, -this.$busiconData.size[1]/2),
+          icon: this.$busiconData.icon, // 添加 Icon 图标 URL
       });
   }
 } 
-export default GDMAP
+module.exports = GDMAP;
