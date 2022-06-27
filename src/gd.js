@@ -8,6 +8,7 @@ class GDMAP{
     this.$callbackList = [] //回调对列表收集
     this.$key= options.key || ""; //高德地图key
     this.$severKey= options.severKey || ""; //服务端key
+    this.$version = options.version || "2.0"
     this.$city = options.city
     this.$mode = options.mode || "auto"
     this.$type = options.type || "GD"; //模式 GD 高德  baidu 百度  tc 腾讯
@@ -31,6 +32,7 @@ class GDMAP{
     this.$curPage = 2;
     this.$size = 50;
     this.$totalPage = 1
+    this.$success = options.success // 初始化成功回调
     if(options.sitePath){
       this.$totalLimit = options.sitePath.length
     } 
@@ -42,22 +44,11 @@ class GDMAP{
     this.$siteiconData = {
       icon:options.siteIcon.icon || siteicon,
       size:options.siteIcon.size || [64, 72]
-    } 
-  
-    //判断过滤
-    if(!this.$key){
-      throw new Error('地图key 没有填写');
-      return
-    }
-    if(!this.$city){
-      throw new Error('查询当前城市没有填写');
-      return
-    }
+    }  
     this.createElement().then(()=>{
-      console.log("------------createElement-------------")
       this.$cmap = new AMap.Map(this.$el, Object.assign({       
         zoom:15,
-      },this.$initParam));
+      },this.$initParam)); 
       if(this.$mode === "auto"){ 
         if(!this.$siteName){
           throw new Error('公交线路没有填写')
@@ -67,6 +58,7 @@ class GDMAP{
       }else{
         this.init()
       } 
+      this.$success && this.$success()
     })
   }
   createElement () {
@@ -75,15 +67,18 @@ class GDMAP{
         var head = document.getElementsByTagName('head').item(0);
         var script = document.createElement('script');
         script.setAttribute('type', 'text/javascript'); 
-        script.setAttribute('src', 'https://webapi.amap.com/maps?v=2.0&key='+this.$key+'&plugin=AMap.LineSearch,AMap.GraspRoad');
+        script.setAttribute('src', 'https://webapi.amap.com/maps?v='+this.$version+'&key='+this.$key+'&plugin=AMap.LineSearch,AMap.GraspRoad');
         head.appendChild(script); 
         script.onload = script.onreadystatechange = function(){
           if(!this.readyState||this.readyState=='loaded'||this.readyState=='complete'){  
+            console.log("百度地图脚本初始化成功...");
             resolve()
           }
           script.onload = script.onreadystatechange=null
        }
-      }  
+      }else{
+        resolve()
+      }   
     })
   }
   init () {
@@ -102,6 +97,7 @@ class GDMAP{
       this.$cheSitePath[index] = busPolyline
     })
   }
+  //公交车
   setSiteCar (data) {
     this.$cheCar.forEach(item=>this.$cmap.remove(item));
     data.forEach(item=>{
@@ -110,8 +106,8 @@ class GDMAP{
       this.$cmap.add(marker)
     })
   }
+  // 公交线路查询
   lineSearch (siteName) {
-    console.log("lineSearch",siteName)
     this.$clearCmapTime && clearInterval(this.$clearCmapTime) // 取消定时器
     this.$cmap.clearMap()  // 创建之前，现在清除之前覆盖物
     let _this = this; 
@@ -132,8 +128,8 @@ class GDMAP{
        }
    });
   } 
+  // 公交线路查询结果回调
   lineSearch_Callback (data) { 
-    console.log("lineSearch_Callback",data)
     var lineArr = data.lineInfo;
     var lineNum = data.lineInfo.length;
     if (lineNum == 0) {
@@ -152,8 +148,7 @@ class GDMAP{
         }
         cur.push([[per.lng,per.lat],[arr[index+1].lng,arr[index+1].lat]])
         return cur
-      },[]); 
-      console.log(JSON.stringify(this.$sitePath))
+      },[]);
       this.$totalPage = Math.ceil(this.$sitePath.length / this.$size)
       this.$totalLimit = this.$sitePath.length
       this.$colorLine = Array(this.$sitePath.length).fill("green");
@@ -204,7 +199,7 @@ class GDMAP{
       this.$curPage++  
       setTimeout(()=>{
         this.startLine()
-      },200)
+      },500)
     }) 
   }
   // 路况情况颜色

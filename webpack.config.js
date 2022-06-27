@@ -4,11 +4,11 @@
  * @Author: 曾利锋[阿牛]
  * @Date: 2022-06-14 16:33:41
  * @LastEditors: 曾利锋[阿牛]
- * @LastEditTime: 2022-06-20 14:54:37
+ * @LastEditTime: 2022-06-27 13:56:59
  */
 const path = require('path');
 module.exports = {
-  mode: "production",
+  mode: "development",
   //打包入口文件路径
   entry: './src/index.js',
   //path打包出口路径，filename写打包后文件名
@@ -30,21 +30,6 @@ module.exports = {
           'file-loader'
         ]
       },
-      // {
-      //   test:/\.(png|jpg|jpeg|gif)$/,
-      //   use:[
-      //       'file-loader',
-      //       {
-      //           loader:"url-loader",
-      //           options:{
-      //               limit:1000,   //表示低于50000字节（50K）的图片会以 base64编码
-      //               // outputPath:"./asset/images",
-      //               // name:[name].[hash:5].[ext],
-      //               // pulbicPath:"./dist/asset/images"
-      //           }
-      //       }
-      //   ]
-      // },
       {
         test:/\.js$/,
         use:{

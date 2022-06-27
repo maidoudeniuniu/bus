@@ -4,7 +4,10 @@ class BDMAP{
     this.$callback = options.callback
     this.$callbackList = [] //回调对列表收集
     this.$key= options.key || "46fw9n7VDbrPzBdhFy6jP87bw2qeDFpc"; //高德地图key
+    this.$severKey= options.severKey || ""; //服务端key
     this.$mode = options.mode || "auto"
+    this.$center = options.center
+    this.$version = options.version || "1.0"
     this.$type = options.type || "GD"; //模式 GD 高德  baidu 百度  tc 腾讯
     this.$el = options.el || "map";  //地图domid
     this.$initParam  = options.initParam || {} //初始化参数
@@ -13,8 +16,8 @@ class BDMAP{
     this.$color = options.color || ['#1BBC60','#ff9900','#ff0000']
     this.$lineSearchData; //线路数据
     this.$sitePath = options.sitePath ||  []; // 线路数据
-    this.$site = options.site || []; //站点列表
     this.$cheSitePath = [] //渲染缓存数据
+    this.$site = options.site || []; //站点列表 
     this.$clearMapPath = [];
     this.$circleMap = [] // 创建圆形数据
     this.$cheCar = [] //车辆覆盖物缓存
@@ -26,23 +29,51 @@ class BDMAP{
     this.$curPage = 2;
     this.$size = 50;
     this.$totalPage = 1;
+    this.$success = options.success // 初始化成功回调
     if(options.sitePath){
       this.$totalLimit = options.sitePath.length
     } 
-    this.$times = 60000000 
-    this.$cmap = new BMapGL.Map(this.$el); // 创建Map实例
-    this.$cmap.centerAndZoom(new BMapGL.Point(120.85897,28.083382), 12); // 初始化地图,设置中心点坐标和地图级别
-    this.$cmap.enableScrollWheelZoom(true); // 开启鼠标滚轮缩放   
-    if(this.$mode === "auto"){
-      this.lineSearch(this.$siteName)
-    }else{
-      this.init()
-    }
+    this.$times = 60000;
+    this.createElement().then(()=>{
+      this.$cmap = new BMapGL.Map(this.$el); // 创建Map实例
+      this.$cmap.centerAndZoom(new BMapGL.Point(this.$center[0],this.$center[1]), 12); // 初始化地图,设置中心点坐标和地图级别
+      this.$cmap.enableScrollWheelZoom(true); // 开启鼠标滚轮缩放   
+      if(this.$mode === "auto"){
+        this.lineSearch(this.$siteName)
+      }else{
+        this.init()
+      } 
+      this.$success && this.$success()
+    })
+   
   }
   init () {
     this.drawbusLine(this.$sitePath);
     this.drawbusCircle();
     // this.startTime();
+  }
+  createElement () {
+    //console.log("初始化百度地图脚本...");
+    const AK = this.$key
+    const V = this.$version
+    const BMap_URL = "https://api.map.baidu.com/api?type=webgl&v="+ V +"&ak="+ AK +"&s=1&callback=onBMapCallback";
+    return new Promise((resolve, reject) => {
+        // 如果已加载直接返回
+        if(typeof BMapGL !== "undefined") {
+          resolve();
+          return true;
+        }
+        // 百度地图异步加载回调处理
+        window.onBMapCallback = function () {
+          console.log("百度地图脚本初始化成功...");
+          resolve();
+        };
+        // 插入script脚本
+        let scriptNode = document.createElement("script");
+        scriptNode.setAttribute("type", "text/javascript");
+        scriptNode.setAttribute("src", BMap_URL);
+        document.body.appendChild(scriptNode);
+    });
   }
   //添加数据变化
   setSitePath (data) { 
@@ -56,9 +87,12 @@ class BDMAP{
     })
   }
   setSiteCar (data) {
-    this.$cheCar.forEach(item=>this.$cmap.remove(item));
+    console.log("setSiteCar",data)
+    this.$cheCar.forEach(item=>this.$cmap.removeOverlay(item));
     data.forEach(item=>{
-
+      let marker = this.marker(item)
+      this.$cheCar.push(marker)
+      this.$cmap.addOverlay(marker)
     })
   }
   lineSearch (siteName) {
@@ -142,7 +176,7 @@ class BDMAP{
   // 缓存各个fetch记录
   getFetch () {
     this.$sitePath.forEach((item)=>{
-      let key = this.$key;
+      let key = this.$severKey;
       let origins = item[0][1] + "," +item[0][0]; 
       let destination =item[1][1] + "," + item[1][0];
       // 这里为什么不加途中点，是因为这个驾车模式，和公交线路不一样的，95%一样，还是5%有可能要绕路，
@@ -174,16 +208,20 @@ class BDMAP{
     }).then(res=>{ 
       return res.json()
     }).then((res)=>{
-      this.$cheSitePath[this.$curPage] && this.$cmap.removeOverlay(this.$cheSitePath[this.$curPage])
-      let newItem = res.result[0]
-      let color = this.distanceColor(newItem.distance.value / newItem.duration.value,newItem.distance.value)
-      let busPolyline = this.drawbusLineItem(this.$sitePath[this.$curPage],color)
-      this.$cmap.addOverlay(busPolyline);
-      this.$cheSitePath[this.$curPage] = busPolyline
-      this.$curPage++  
-      setTimeout(()=>{
-        this.startLine()
-      },200)
+      if(res.status == 0){
+        this.$cheSitePath[this.$curPage] && this.$cmap.removeOverlay(this.$cheSitePath[this.$curPage])
+        let newItem = res.result[0]
+        let color = this.distanceColor(newItem.distance.value / newItem.duration.value,newItem.distance.value)
+        let busPolyline = this.drawbusLineItem(this.$sitePath[this.$curPage],color)
+        this.$cmap.addOverlay(busPolyline);
+        this.$cheSitePath[this.$curPage] = busPolyline
+        this.$curPage++  
+        setTimeout(()=>{
+          this.startLine()
+        },1000)
+      }else{
+        console.log(res.message)
+      } 
     }) 
   }
   // 路况情况颜色
@@ -207,51 +245,29 @@ class BDMAP{
     this.$siteTxt.forEach(item=>{
       this.$cmap.removeOverlay(item)
      }) 
-    this.$site.forEach((item,index)=>{
-      this.drawbusCircleItem({lng:item.lng,lat:item.lat,name:item.name,index:index})
-    })
+    setTimeout(()=>{
+      this.$site.forEach((item,index)=>{ 
+        this.drawbusCircleItem({lng:item.lng,lat:item.lat,name:item.name,index:index})
+      })
+    },100)
   }
-  drawbusCircleItem (item) { 
-    // let style = {
-    //   fontSize:"12px"
-    // }
-    // let circle = new AMap.Circle({
-    //   center: new AMap.LngLat(item.lng,item.lat),  // 圆心位置
-    //   radius: 1, // 圆半径
-    //   fillColor: '#fff',   // 圆形填充颜色
-    //   strokeColor: 'green', // 描边颜色
-    //   strokeWeight: 1, // 描边宽度
-    //   fillOpacity:1,
-    //   zIndex:100
-    // }); 
-    // if(this.$siteTxtlock > -1 && this.$siteTxtlock == item.index){
-    //   style={
-    //     fontSize:"12px",
-    //     fontWeight:"bold"
-    //   }
-    // }
+  drawbusCircleItem (item) {
     var opts = {
       position: new BMapGL.Point(item.lng,item.lat), // 指定文本标注所在的地理位置
       offset: new BMapGL.Size(-10, 0) // 设置文本偏移量
-    };
-    // 创建文本标注对象
-    var text = new BMapGL.Label(item.name, opts);
-
-
-    // var text = new AMap.Text({
-    //   text:item.name,
-    //   anchor:'center', // 设置文本标记锚点
-    //   draggable:false,
-    //   cursor:'pointer', 
-    //   style:style,
-    //   position: [item.lng,item.lat]
-    // });
+    }; 
+    var text; 
+    if(this.$siteTxtlock > -1 && this.$siteTxtlock == item.index){
+      text = new BMapGL.Marker(new BMapGL.Point(item.lng, item.lat));
+    }else{
+      text = new BMapGL.Label(item.name, opts); 
+    }
     text.on('click',(e)=>{ 
       this.$siteTxtlock = item.index;
       this.drawbusCircle() 
       this.forCallback(item)
     })
-    // this.$circleMap.push(circle)
+    // this.$circleMap.push(circle) 
     this.$siteTxt.push(text)
     // circle.setMap(this.$cmap);
     this.$cmap.addOverlay(text);  
@@ -282,6 +298,16 @@ class BDMAP{
       strokeWeight: 8,
       strokeOpacity: 1, 
     });   
+  }
+  //覆盖物
+  marker (item) {
+    let markerIcon = {}
+    var point = new BMapGL.Point(item.lng, item.lat);
+    if(this.$busiconData && this.$busiconData.icon){
+      var myIcon = new BMapGL.Icon(this.$busiconData.icon, new BMapGL.Size(this.$busiconData.size[0], this.$busiconData.size[1]));
+      markerIcon.icon = myIcon
+    }
+    return new BMapGL.Marker(point,markerIcon); 
   }
 }
 

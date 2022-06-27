@@ -4,7 +4,7 @@
  * @Author: 曾利锋[阿牛]
  * @Date: 2022-06-13 15:39:56
  * @LastEditors: 曾利锋[阿牛]
- * @LastEditTime: 2022-06-20 11:15:58
+ * @LastEditTime: 2022-06-27 13:32:06
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -15,25 +15,37 @@
     <title>Document</title>
       <script type="text/javascript">
         window._AMapSecurityConfig = {
-          serviceHost: 'http://10.10.71.111:9005/_AMapService',
+          serviceHost: 'http://10.10.70.76:9000/_AMapService',
           securityJsCode: "d6c0697f5c1aa208450b2a2886c884f2"
           // 例如 ：serviceHost:'http://1.1.1.1:80/_AMapService',
         }
       </script>
-      <script type="text/javascript" src="//api.map.baidu.com/api?type=webgl&v=1.0&ak=8V5T9WXlsVsoHPe6DKzYbVkIRGFlZnKy"></script>
+      <!-- <script type="text/javascript" src="//api.map.baidu.com/api?type=webgl&v=1.0&ak=8V5T9WXlsVsoHPe6DKzYbVkIRGFlZnKy"></script> -->
       <script type="text/javascript" src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js"></script>
       <script type="text/javascript" src="https://cdn.bootcdn.net/ajax/libs/fetch-jsonp/1.2.1/fetch-jsonp.min.js"></script>
-      <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=177f3eba147eaea82ba0a3a382113aab&plugin=AMap.LineSearch,AMap.GraspRoad"></script>
-      <script src="https://map.qq.com/api/gljs?v=1.exp&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77"></script>
+      <!-- <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=177f3eba147eaea82ba0a3a382113aab&plugin=AMap.LineSearch,AMap.GraspRoad"></script> -->
+      <!-- <script src="https://map.qq.com/api/gljs?v=1.exp&key=OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77"></script> -->
 </head>
 <body>
     <div id ="app"></div>
-    <script src="./dist/main.js"></script>
+    <script src="./anbustime/dist/main.js"></script>
     <script>
         let data = new Cmap({
             el:"app",
-            type:"gd",
-            key:"1111"
+            type:"gd", 
+            key: '177f3eba147eaea82ba0a3a382113aab',
+            severKey: '84089e5b76b44cffaa5e719c60efc745',
+            center:[120.901932,28.051754],
+            city: '乐清市',
+            siteName: '乐清211路',
+            siteIcon: {
+                icon: 'https://vdata.amap.com/icons/b18/1/2.png',
+                size: [24, 24]
+            },
+            busIcon: {
+                icon: 'https://vdata.amap.com/icons/b18/1/2.png',
+                size: [24, 24]
+            }
         })
         data.callback((e)=>{
             console.log("callback",e)
